@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .console {
+                margin-top: 16px;
+                border: 1px solid #333;
+                border-radius: 3px;
+                padding: 10px;
+
+                width: 300px;
+                height: 300px;
+
+                overflow-y: scroll;
+            }
+        </style>
+        <script data-main="app" src="node_modules/requirejs/require.js"></script>
+    </head>
+    <body>
+        <h1>Hello World</h1>
+        <br/>
+        <button type="button"
+            data-component='{
+                "name": "c1",
+                "type": "ButtonComponent",
+                "emits": ["click"],
+                "channel": { "name": "btn", "to": "logic" }
+            }'>
+            Press me
+        </button>
+        <input type="text"
+            data-component='{
+                "name": "c2",
+                "type": "TextFieldComponent",
+                "emits": ["input", "keypress"],
+                "channel": { "name": "box1", "to": "logic" }
+            }'/>
+        <input type="text"
+            data-component='{
+                "name": "c3",
+                "type": "TextFieldComponent",
+                "emits": ["keypress"],
+                "channel": { "name": "box2", "to": "logic" }
+            }'/>
+        <input type="text"
+            data-component='{
+                "name": "c4",
+                "type": "TextFieldComponent",
+                "emits": ["keypress"],
+                "channel": { "name": "_", "to": "logic" }
+            }'/>
+        <div class="console"
+            data-component='{
+                "name": "c5",
+                "type": "ConsoleComponent",
+                "emits": [],
+                "channel": { "name": "con", "to": "logic" }
+            }'>
+        </div>
+    </body>
+</html>

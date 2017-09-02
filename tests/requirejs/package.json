@@ -1,0 +1,8 @@
+{
+  "name": "test_requirejs",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "requirejs": "^2.3.5"
+  }
+}

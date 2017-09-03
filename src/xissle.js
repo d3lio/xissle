@@ -27,7 +27,34 @@ const libxissle = (function xissle() {
     const core = (function core(platform) {
         'use strict';
 
-        const EventEmitter = (function() {
+        const {each, argsToArray} = (function helpers() {
+            function each(target, cb) {
+                if (target instanceof Array || target instanceof Set || target instanceof Map) {
+                    target.forEach(cb);
+                } else if (typeof target === 'object') {
+                    for (let prop in target) {
+                        if (target.hasOwnProperty(prop)) {
+                            cb.call(this, target[prop], prop, target);
+                        }
+                    }
+                }
+            }
+
+            function argsToArray() {
+                const args = new Array(arguments.length);
+                for (let i = 0; i < args.length; i++) {
+                    args[i] = arguments[i];
+                }
+                return args;
+            }
+
+            return {
+                each,
+                argsToArray
+            }
+        }());
+
+        const EventEmitter = (function eventEmitter() {
             if (platform === 'nodejs') {
                 return require('events');
             }
@@ -47,7 +74,7 @@ const libxissle = (function xissle() {
 
                 emit(event) {
                     const handlers = this.listeners.get(event);
-                    const args = Array.prototype.slice.call(arguments, 1);
+                    const args = argsToArray.apply(null, arguments).slice(1);
 
                     if (handlers) {
                         handlers.forEach(handler => handler.apply(null, args));
@@ -56,61 +83,47 @@ const libxissle = (function xissle() {
             };
         }());
 
-        function each(target, cb) {
-            if (target instanceof Array || target instanceof Set || target instanceof Map) {
-                target.forEach(cb);
-            } else if (typeof target === 'object') {
-                for (let prop in target) {
-                    if (target.hasOwnProperty(prop)) {
-                        cb.call(this, target[prop], prop, target);
-                    }
-                }
-            }
-        }
-
         function subscribe(group, component, actions) {
             component.groups.set(group.name, group);
 
-            const message = function message(group) {
-                const g = this.get(group);
+            const message = function message(group, event) {
+                const g = this.groups.get(group);
+                const args = argsToArray.apply(null, arguments).slice(2);
 
                 if (g) {
-                    g.emit(...Array.prototype.slice.call(arguments, 1));
+                    g.emit(event, this.name, ...args);
                 } else {
                     throw new XissleError(`Group ${group} not found.`);
                 }
-            }.bind(component.groups);
+            }.bind(component);
 
             if (actions === true) {
                 actions = Object.keys(component.actions);
-            }
-
-            if (actions === false) {
+            } else if (actions === false) {
                 actions = [];
             }
 
-            if (actions instanceof Array) {
-                actions = new Set(actions);
-                each(component.actions, (handler, event) => {
-                    if (actions.has(event)) {
-                        // TODO(high): the listener should probably know who called it.
-                        group.on(event, handler.bind(
-                            component.storage,
-                            {
-                                name: component.name,
-                                storage: component.storage,
-                                groups: component.groups,
-                                currentGroup: group,
-                                message: message
-                            }
-                        ));
-                    }
-                });
-
-                return;
+            if (!(actions instanceof Array)) {
+                throw new XissleError(`Invalid action subscription arguments: expected ` +
+                    `'true/false/string[]' found '${typeof actions}'`);
             }
 
-            throw new XissleError('');
+            const actionsSet = new Set(actions);
+            each(component.actions, (handler, event) => {
+                if (actionsSet.has(event)) {
+                    group.on(event, function(name) {
+                        const context = {
+                            from: name,
+                            group: group.name,
+                            internals: component.internals,
+                            message: message
+                        };
+
+                        handler.call(component.storage, context,
+                            ...argsToArray.apply(null, arguments).slice(1));
+                    });
+                }
+            });
         }
 
         class XissleError extends Error {
@@ -164,7 +177,7 @@ const libxissle = (function xissle() {
             }
 
             run() {
-                this.groups.get('global').emit('main', ...arguments);
+                this.groups.get('global').emit('main', 'global', ...arguments);
             }
         }
 
@@ -188,10 +201,18 @@ const libxissle = (function xissle() {
          */
         class ExternalComponent {
             constructor(name, storage, actions) {
-                this.name = name || '';
+                this.name = (name || '') + '';
                 this.storage = storage || {};
                 this.actions = actions || {};
                 this.groups = new Map();
+            }
+
+            internals() {
+                return {
+                    name: this.name,
+                    storage: this.storage,
+                    groups: new Set(this.groups.keys()),
+                };
             }
         }
 
@@ -269,39 +290,35 @@ const libxissle = (function xissle() {
         const { Xissle, ExternalComponent } = core;
 
         const components = (function components() {
-            function emit(group, event, args) {
-                if (group.name !== 'global') {
-                    group.emit(event, ...args);
-                }
-            }
-
-            function htmlElementEventsProxy(element, component, events) {
-                events.forEach(event => {
-                    function listener(ev) {
-                        component.groups.forEach(group => emit(group, event, [ev]));
-                    }
-
-                    if (!element._xissleEventListeners) {
-                        element._xissleEventListeners = new Map([[event, [listener]]]);
-                    } else {
-                        const listeners = element._xissleEventListeners.get(event);
-                        if (listeners) {
-                            listeners.push(listener);
-                        } else {
-                            element._xissleEventListeners.set(event, [listener]);
-                        }
-                    }
-
-                    // Attach the native handler
-                    element.addEventListener(event, listener);
-                });
-            }
-
             class HtmlComponent extends ExternalComponent {
                 constructor(name, element, events) {
                     super(name, element, {});
 
-                    htmlElementEventsProxy(element, this, events);
+                    const self = this;
+
+                    events.forEach(event => {
+                        function listener(ev) {
+                            self.groups.forEach(group => {
+                                if (group.name !== 'global') {
+                                    group.emit(event, self.name, ev);
+                                }
+                            });
+                        }
+
+                        if (!element._xissleEventListeners) {
+                            element._xissleEventListeners = new Map([[event, [listener]]]);
+                        } else {
+                            const listeners = element._xissleEventListeners.get(event);
+                            if (listeners) {
+                                listeners.push(listener);
+                            } else {
+                                element._xissleEventListeners.set(event, [listener]);
+                            }
+                        }
+
+                        // Attach the native handler
+                        element.addEventListener(event, listener);
+                    });
                 }
             }
 
@@ -337,29 +354,14 @@ const libxissle = (function xissle() {
                 }
             }
 
-            class ConsoleComponent extends HtmlComponent {
-                constructor(name, element, events) {
-                    super(...arguments);
-
-                    this.actions = {
-                        log(ctx, text) {
-                            const date = new Date();
-                            const format = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-                            this.innerHTML += `${format}: ${text}<br>`;
-                            this.scrollTop = this.scrollHeight;
-                        }
-                    };
-                }
-            }
-
             return {
                 HtmlComponent,
                 ButtonComponent,
-                TextFieldComponent,
-                ConsoleComponent,
+                TextFieldComponent
             };
         }());
 
+        // TODO
         const views = (function views() {
             class View {
                 constructor(name) {
@@ -383,7 +385,7 @@ const libxissle = (function xissle() {
             };
         }());
 
-        Xissle.prototype.parseDom = function parseDom() {
+        Xissle.prototype.parseDom = function parseDom(customs) {
             const htmlElements = document.querySelectorAll('[data-component]') || [];
 
             htmlElements.forEach(element => {
@@ -391,11 +393,11 @@ const libxissle = (function xissle() {
 
                 try {
                     config = JSON.parse(element.dataset.component);
-                } catch(err) {
-                    throw new XissleError(`TODO ${err.message}`);
+                } catch (err) {
+                    throw new XissleError(`Failed to parse DOM component config: ${err.message}`);
                 }
 
-                const constructor = components[config.type];
+                const constructor = components[config.type] || customs[config.type];
 
                 if (!constructor) {
                     throw new XissleError(`Nonexisting constructor ${config.type} while parsing DOM`);
@@ -417,7 +419,7 @@ const libxissle = (function xissle() {
         }
 
         return {
-            componenets: components,
+            components: components,
             views: views
         };
     }

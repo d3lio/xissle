@@ -3,7 +3,22 @@ define(require => {
 
     const lib = require('src/xissle');
     const {Xissle, Component} = lib.core;
-    const {ButtonComponent, TextFieldComponent} = lib.browser;
+    const {HtmlComponent} = lib.browser.components;
+
+    class ConsoleComponent extends HtmlComponent {
+        constructor(name, element, events) {
+            super(...arguments);
+
+            this.actions = {
+                log(ctx, text) {
+                    const date = new Date();
+                    const format = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+                    this.innerHTML += `${format}: ${text}<br>`;
+                    this.scrollTop = this.scrollHeight;
+                }
+            };
+        }
+    }
 
     const xissle = new Xissle(window);
 
@@ -22,7 +37,7 @@ define(require => {
         }
     }));
 
-    xissle.parseDom();
+    xissle.parseDom({ ConsoleComponent });
 
     xissle.run();
 });

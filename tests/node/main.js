@@ -7,9 +7,9 @@ const xissle = new Xissle(global);
 xissle.component(new Component('c1', {
     user: 'Jane Doe'
 }, {
-    main({ groups }, argv) {
-        console.log(`Args: ['${argv.join("', '")}']`);
-        groups.get('g1').emit('greet', this.user);
+    main({ message }, argv) {
+        console.log(`Args: [${argv.join(', ')}]`);
+        message('g1', 'greet', this.user);
     }
 }));
 

@@ -62,7 +62,7 @@ const libxissle = (function xissle() {
             } else if (typeof target === 'object') {
                 for (let prop in target) {
                     if (target.hasOwnProperty(prop)) {
-                        cb(target[prop], prop, target);
+                        cb.call(this, target[prop], prop, target);
                     }
                 }
             }
@@ -179,6 +179,13 @@ const libxissle = (function xissle() {
             }
         }
 
+        /**
+         * The base type of component.
+         *
+         * This should be used to wrap any third party or core language objects before introducing
+         * them into the system. It should not be used by users to bypass Component's and
+         * MutableComponent's storage guarantees.
+         */
         class ExternalComponent {
             constructor(name, storage, actions) {
                 this.name = name || '';
@@ -188,27 +195,55 @@ const libxissle = (function xissle() {
             }
         }
 
+        /**
+         * Storage mutability with type checking on value set.
+         *
+         * This does have runtime overhead and thus should be used only when really necessary.
+         */
         class MutableComponent extends ExternalComponent {
             constructor(name, storage, actions) {
                 super(...arguments);
 
-                // TODO disallow null and undefined post initialize
-                each(storage, (value, key) => {
+                const valueStorage = this.storage;
+                const supervisedStorage = {};
+
+                each(valueStorage, (value, key) => {
                     if (value === null || value === undefined) {
                         throw new XissleError(`Uninitialized: ${name}.${key}`);
                     }
+
+                    Object.defineProperty(supervisedStorage, key, {
+                        get: function() {
+                            return valueStorage[key];
+                        },
+                        set: function(value) {
+                            if (typeof value !== typeof this[key] || value === null) {
+                                throw new XissleError(`Type missmatch: ${name}.${key} expected ` +
+                                    `'${typeof this[key]}' found ` +
+                                    `'${value === null ? 'null' : typeof value}'`);
+                            }
+                            valueStorage[key] = value;
+                        }
+                    });
                 });
 
-                this.storage = Object.seal(this.storage);
+                this.storage = Object.seal(supervisedStorage);
             }
         }
 
         /**
          * Shallow storage immutability
          */
-        class Component extends MutableComponent {
+        class Component extends ExternalComponent {
             constructor(name, storage, actions) {
                 super(...arguments);
+
+                each(this.storage, (value, key) => {
+                    if (value === null || value === undefined) {
+                        throw new XissleError(`Uninitialized: ${name}.${key}`);
+                    }
+                });
+
                 this.storage = Object.freeze(this.storage);
             }
         }

@@ -20,11 +20,9 @@ classes and functions/methods are introduced by `impl` blocks.
 A component's storage is it's state and can be either immutable (frozen) or mutable (sealed).
 Both are non-extendable so any persistent state the component will use should be declared beforehand
 and it must not be `null` or `undefined` and cannot be changed to neither of them at *runtime.
-The idea behind this decision is memory safety in the form of no property lookup on or usage of
-null and undefined. The inspiration for the decision again comes from `Rust`.
-
-**\* At the moment it's possible to change a storage variable to null or undefined at runtime but will
-be prohibited later on.**
+The type of the storage variables cannot be changed at runtime as well. The idea behind these
+decisions is memory safety in the form of no property lookup on or usage of null and undefined.
+The inspiration for the decision again comes from `Rust`.
 
 Actions are the "methods" of the component. This is where the component's logic goes. They cannot be
 invoked directly by are triggered by events emitted in `groups`.

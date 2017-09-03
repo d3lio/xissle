@@ -34,7 +34,7 @@ Actions are the "methods" of the component. This is where the component's logic 
 invoked directly but are only triggered by events emitted in `groups`.
 
 #### Example
-```
+```JavaScript
     const {Xissle, Component} = require('xissle').core;
 
     const xissle = new Xissle(global);

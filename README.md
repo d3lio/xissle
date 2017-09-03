@@ -26,7 +26,7 @@ The inspiration for the decision again comes from `Rust`.
 
 > **Note:** The storage management is only shallow which means any objects
 defined in the storage can have their properties modified unless you wrap them in
-`Xissle.mutable(obj)` and `Xissle.immutable(obj)`.
+`Xissle.mutable(obj)` or `Xissle.immutable(obj)`.
 Be careful when using those or you might make a third party object immutable where it shouldn't be
 since it's not managed by your code and it doesn't follow the idelogy of the framewok.
 

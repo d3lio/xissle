@@ -1,7 +1,7 @@
 {
   "name": "xissle",
   "version": "1.0.0",
-  "main": "xissle.js",
+  "main": "src/xissle.js",
   "author": "Delyan Dobrev",
   "license": "MIT"
 }

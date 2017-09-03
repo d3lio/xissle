@@ -2,10 +2,12 @@
 
 Component based event driven js framework for nodejs and browsers.
 
-### Ideology
+## Ideology
 
 Simple library revolving around `components` which are equivalent to singleton classes and `groups`
 which by themselves are event emitters.
+
+### Components
 
 `Components` are made of two core parts:
 
@@ -21,11 +23,13 @@ and it must not be `null` or `undefined` and cannot be changed to neither of the
 The idea behind this decision is memory safety in the form of no property lookup on or usage of
 null and undefined. The inspiration for the decision again comes from `Rust`.
 
-\* At the moment it's possible to change a storage variable to null or undefined at runtime but will
-be prohibited later on.
+**\* At the moment it's possible to change a storage variable to null or undefined at runtime but will
+be prohibited later on.**
 
 Actions are the "methods" of the component. This is where the component's logic goes. They cannot be
 invoked directly by are triggered by events emitted in `groups`.
+
+### Groups
 
 `Groups` are event emitters which purpose is to allow components to interact with each other.
 

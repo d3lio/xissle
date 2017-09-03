@@ -135,7 +135,7 @@ const libxissle = (function xissle() {
         class Xissle {
             constructor(global) {
                 this.components = new Map([
-                    ['global', new ExternalComponent('global', global, {})]
+                    ['global', new ExternalComponent('global', global || {}, {})]
                 ]);
 
                 this.groups = new Map([
@@ -181,7 +181,41 @@ const libxissle = (function xissle() {
             }
         }
 
+        Xissle.mutable = function mutable(obj, name) {
+            const objName = name || '_anonymous_';
+            const valueStorage = obj;
+            const supervisedStorage = {};
+
+            each(valueStorage, (value, key) => {
+                if (value === null || value === undefined) {
+                    throw new XissleError(`Uninitialized: ${objName}.${key}`);
+                }
+
+                Object.defineProperty(supervisedStorage, key, {
+                    get: function() {
+                        return valueStorage[key];
+                    },
+                    set: function(value) {
+                        if (typeof value !== typeof this[key] || value === null) {
+                            throw new XissleError(`Type missmatch: ${objName}.${key} expected ` +
+                                `'${typeof this[key]}' found ` +
+                                `'${value === null ? 'null' : typeof value}'`);
+                        }
+                        valueStorage[key] = value;
+                    }
+                });
+            });
+
+            return Object.seal(supervisedStorage);
+        };
+
         Xissle.immutable = function immutable(obj) {
+            each(obj, (value, key) => {
+                if (value === null || value === undefined) {
+                    throw new XissleError(`Uninitialized: ${name}.${key}`);
+                }
+            });
+
             return Object.freeze(obj);
         };
 
@@ -225,30 +259,7 @@ const libxissle = (function xissle() {
             constructor(name, storage, actions) {
                 super(...arguments);
 
-                const valueStorage = this.storage;
-                const supervisedStorage = {};
-
-                each(valueStorage, (value, key) => {
-                    if (value === null || value === undefined) {
-                        throw new XissleError(`Uninitialized: ${name}.${key}`);
-                    }
-
-                    Object.defineProperty(supervisedStorage, key, {
-                        get: function() {
-                            return valueStorage[key];
-                        },
-                        set: function(value) {
-                            if (typeof value !== typeof this[key] || value === null) {
-                                throw new XissleError(`Type missmatch: ${name}.${key} expected ` +
-                                    `'${typeof this[key]}' found ` +
-                                    `'${value === null ? 'null' : typeof value}'`);
-                            }
-                            valueStorage[key] = value;
-                        }
-                    });
-                });
-
-                this.storage = Object.seal(supervisedStorage);
+                this.storage = Xissle.mutable(this.storage, this.name);
             }
         }
 
@@ -259,13 +270,7 @@ const libxissle = (function xissle() {
             constructor(name, storage, actions) {
                 super(...arguments);
 
-                each(this.storage, (value, key) => {
-                    if (value === null || value === undefined) {
-                        throw new XissleError(`Uninitialized: ${name}.${key}`);
-                    }
-                });
-
-                this.storage = Object.freeze(this.storage);
+                this.storage = Xissle.immutable(this.storage);
             }
         }
 

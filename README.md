@@ -88,7 +88,7 @@ their actions subscribed to the channel (group).
 
 For example lets take a look at the above example and recreate it by using a channel
 
-```js
+```JavaScript
     ...
     xissle.group('g1', {
         c1: ['main'],
@@ -101,7 +101,7 @@ What this does is it creates a group called `g1` and the components `c1` and `c2
 with their actions `main` and `greet` respectively. First of all these actions are all that the
 components have so we can simplify this example to
 
-```js
+```JavaScript
     ...
     xissle.group('g1', {
         c1: true,
@@ -112,7 +112,7 @@ components have so we can simplify this example to
 
 Now by definition `channels` fit this example perfectly so lets see how it would look
 
-```js
+```JavaScript
     ...
     xissle.channel('g1', 'c1', 'c2');
     ...

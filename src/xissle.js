@@ -1,4 +1,5 @@
-const libxissle = (function xissle() {
+// TODO try to fit browser ES6 modules, nodejs and requirejs
+const libxissle = (function xissle() { // eslint-disable-line no-unused-vars
     'use strict';
 
     const platform = (function() {
@@ -12,11 +13,12 @@ const libxissle = (function xissle() {
             } catch (err) {
                 if (err instanceof ReferenceError && window) {
                     if (define) return p = 'browser.requirejs';
-                } else {
                     return p = 'browser';
+                } else {
+                    return p = 'unknown';
                 }
             }
-        }
+        };
     }());
 
     /**
@@ -28,6 +30,7 @@ const libxissle = (function xissle() {
         'use strict';
 
         const {each, argsToArray} = (function helpers() {
+            // TODO(medium): consistency
             function each(target, cb) {
                 if (target instanceof Array || target instanceof Set || target instanceof Map) {
                     target.forEach(cb);
@@ -51,7 +54,7 @@ const libxissle = (function xissle() {
             return {
                 each,
                 argsToArray
-            }
+            };
         }());
 
         const EventEmitter = (function eventEmitter() {
@@ -104,7 +107,7 @@ const libxissle = (function xissle() {
             }
 
             if (!(actions instanceof Array)) {
-                throw new XissleError(`Invalid action subscription arguments: expected ` +
+                throw new XissleError('Invalid action subscription arguments: expected ' +
                     `'true/false/string[]' found '${typeof actions}'`);
             }
 
@@ -133,9 +136,18 @@ const libxissle = (function xissle() {
         }
 
         class Xissle {
-            constructor(global) {
+            constructor() {
+                let globalObj = {};
+
+                if (platform === 'nodejs') {
+                    globalObj = global;
+                } else if (platform.indexOf('browser') === 0) {
+                    globalObj = window;
+                }
+
+                // TODO(medium): make this useful
                 this.components = new Map([
-                    ['global', new ExternalComponent('global', global || {}, {})]
+                    ['global', new ExternalComponent('global', globalObj, {})]
                 ]);
 
                 this.groups = new Map([
@@ -152,9 +164,9 @@ const libxissle = (function xissle() {
                     throw new XissleError('Duplicate component name.');
                 }
 
-                const global = this.groups.get('global');
-
                 this.components.set(component.name, component);
+
+                const global = this.groups.get('global');
 
                 subscribe(global, component, ['main']);
             }
@@ -168,7 +180,7 @@ const libxissle = (function xissle() {
                 this.groups.set(name, group);
 
                 each(components, (actions, name) => {
-                    subscribe(group, this.components.get(name), actions)
+                    subscribe(group, this.components.get(name), actions);
                 });
             }
 
@@ -209,10 +221,12 @@ const libxissle = (function xissle() {
             return Object.seal(supervisedStorage);
         };
 
-        Xissle.immutable = function immutable(obj) {
+        Xissle.immutable = function immutable(obj, name) {
+            const objName = name || '_anonymous_';
+
             each(obj, (value, key) => {
                 if (value === null || value === undefined) {
-                    throw new XissleError(`Uninitialized: ${name}.${key}`);
+                    throw new XissleError(`Uninitialized: ${objName}.${key}`);
                 }
             });
 
@@ -245,6 +259,7 @@ const libxissle = (function xissle() {
                 return {
                     name: this.name,
                     storage: this.storage,
+                    // Iterator to Set
                     groups: new Set(this.groups.keys()),
                 };
             }
@@ -257,7 +272,7 @@ const libxissle = (function xissle() {
          */
         class MutableComponent extends ExternalComponent {
             constructor(name, storage, actions) {
-                super(...arguments);
+                super(name, storage, actions);
 
                 this.storage = Xissle.mutable(this.storage, this.name);
             }
@@ -268,7 +283,7 @@ const libxissle = (function xissle() {
          */
         class Component extends ExternalComponent {
             constructor(name, storage, actions) {
-                super(...arguments);
+                super(name, storage, actions);
 
                 this.storage = Xissle.immutable(this.storage);
             }
@@ -292,7 +307,7 @@ const libxissle = (function xissle() {
     function browser(core) {
         'use strict';
 
-        const { Xissle, ExternalComponent } = core;
+        const { Xissle, XissleError, ExternalComponent } = core;
 
         const components = (function components() {
             class HtmlComponent extends ExternalComponent {
@@ -310,14 +325,14 @@ const libxissle = (function xissle() {
                             });
                         }
 
-                        if (!element._xissleEventListeners) {
-                            element._xissleEventListeners = new Map([[event, [listener]]]);
+                        if (!element.__xissleEventListeners) {
+                            element.__xissleEventListeners = new Map([[event, [listener]]]);
                         } else {
-                            const listeners = element._xissleEventListeners.get(event);
+                            const listeners = element.__xissleEventListeners.get(event);
                             if (listeners) {
                                 listeners.push(listener);
                             } else {
-                                element._xissleEventListeners.set(event, [listener]);
+                                element.__xissleEventListeners.set(event, [listener]);
                             }
                         }
 
@@ -329,13 +344,13 @@ const libxissle = (function xissle() {
 
             class ButtonComponent extends HtmlComponent {
                 constructor(name, element, events) {
-                    super(...arguments);
+                    super(name, element, events);
                 }
             }
 
             class TextFieldComponent extends HtmlComponent {
                 constructor(name, element, events) {
-                    super(...arguments);
+                    super(name, element, events);
 
                     this.actions = {
                         text(ctx, argument) {
@@ -343,11 +358,11 @@ const libxissle = (function xissle() {
                             if (typeof argument === 'string') {
                                 this.value = argument;
 
-                                const oninput = this._xissleEventListeners.get('input');
+                                const oninput = this.__xissleEventListeners.get('input');
                                 if (oninput) {
                                     oninput.forEach(handler => handler({
                                         // TODO: use the InputEvent class
-                                        type: "input",
+                                        type: 'input',
                                         target: this
                                     }));
                                 }
@@ -359,6 +374,31 @@ const libxissle = (function xissle() {
                 }
             }
 
+            /**
+             * Register custom HtmlComponent classes to lookup during DOM parsing.
+             *
+             * @param {Class} compClass The derived class.
+             */
+            Xissle.prototype.registerHtmlComponentClass = function registerHtmlComponentClass(compClass) {
+                const name = compClass.name;
+
+                if (!(compClass.prototype instanceof HtmlComponent)) {
+                    throw new XissleError(`Trying to register a non HtmlComponent class ${name}`);
+                }
+
+                if (components.hasOwnProperty(name)) {
+                    throw new XissleError(`HtmlComponent class ${name} already exists`);
+                }
+
+                if (!this.customHtmlComponents) {
+                    this.customHtmlComponents = new Map([[name, compClass]]);
+                } else if (this.customHtmlComponents.has(name)) {
+                    throw new XissleError(`HtmlComponent class ${name} already exists`);
+                } else {
+                    this.customHtmlComponents.set(name, compClass);
+                }
+            };
+
             return {
                 HtmlComponent,
                 ButtonComponent,
@@ -366,66 +406,96 @@ const libxissle = (function xissle() {
             };
         }());
 
-        // TODO
         const views = (function views() {
+            // TODO(high): data-view parsing and decisions about view groups
+            function parseDom(xissle, root, configs) {
+                const componentNames = [];
+
+                root.querySelectorAll('[data-component]').forEach(element => {
+                    const name = element.dataset.component;
+                    const config = configs[name];
+                    const constructor = components[config.type] ||
+                                        xissle.customHtmlComponents.get(config.type);
+
+                    if (!constructor) {
+                        throw new XissleError(`Nonexisting constructor ${config.type} while parsing DOM`);
+                    }
+
+                    // Create the desired component.
+                    const component = new constructor(name, element, config.emits);
+
+                    // Register the component
+                    xissle.component(component);
+
+                    // Push the name in the return list
+                    componentNames.push(name);
+
+                    if (config.channel) {
+                        xissle.channel(config.channel.name, component.name, config.channel.to);
+                    }
+                });
+
+                return componentNames;
+            }
+
+            if (!DOMParser) {
+                throw new XissleError('DOMParser not found.');
+                // TODO(low): use innerHTML otherwise
+            }
+
+            const domParser = new DOMParser();
+
             class View {
-                constructor(name) {
-                    `div(
-                        data-component: {
-
-
-                        },
-                        class: ""
-                    ) {
-                        div()
-                    }`;
-                    ['div', {'data-component': {}}, [
-                        ['div', {}, []]
-                    ]];
+                constructor(name, configs, html) {
+                    this.name = name;
+                    this.configs = configs;
+                    // TODO(high): ajax call for html template file
+                    this.element = domParser.parseFromString(html, 'text/html');
                 }
             }
 
+            Xissle.prototype.view = function view(rootElement, view, opts) {
+                if (!this.views) {
+                    this.views = new Map();
+                }
+
+                if (!(view instanceof View)) {
+                    throw new XissleError('Trying to register a non view.');
+                }
+
+                if (this.views.has(view.name)) {
+                    throw new XissleError('Duplicate view name.');
+                }
+
+                this.views.set(view.name, view);
+
+                const componentNames = parseDom(this, view.element, view.configs);
+
+                view.element.querySelectorAll('body > *')
+                    .forEach(child => rootElement.appendChild(child));
+
+                view.element = rootElement;
+
+                if (opts) {
+                    const { groupName } = opts;
+
+                    if (groupName) {
+                        this.group(groupName, componentNames.reduce((acc, name) => {
+                            acc[name] = true;
+                            return acc;
+                        }, {}));
+                    }
+                }
+            };
+
             return {
-                View: View
+                View
             };
         }());
 
-        Xissle.prototype.parseDom = function parseDom(customs) {
-            const htmlElements = document.querySelectorAll('[data-component]') || [];
-
-            htmlElements.forEach(element => {
-                let config;
-
-                try {
-                    config = JSON.parse(element.dataset.component);
-                } catch (err) {
-                    throw new XissleError(`Failed to parse DOM component config: ${err.message}`);
-                }
-
-                const constructor = components[config.type] || customs[config.type];
-
-                if (!constructor) {
-                    throw new XissleError(`Nonexisting constructor ${config.type} while parsing DOM`);
-                }
-
-                // Create the desired component.
-                const component = new constructor(config.name, element, config.emits);
-
-                if (!(component instanceof components.HtmlComponent)) {
-                    throw new XissleError('Element tried to instanciate a non HtmlComponent while parsing DOM');
-                }
-
-                this.component(component);
-
-                if (config.channel) {
-                    this.channel(config.channel.name, component.name, config.channel.to);
-                }
-            });
-        }
-
         return {
-            components: components,
-            views: views
+            components,
+            views
         };
     }
 

@@ -2,7 +2,7 @@
 
 const {Xissle, Component} = require('../../src/xissle').core;
 
-const xissle = new Xissle(global);
+const xissle = new Xissle();
 
 xissle.component(new Component('c1', {
     user: 'Jane Doe'

@@ -1,0 +1,55 @@
+label {
+    font-size: small;
+
+    width: 0px;
+    margin-bottom: 5px;
+
+    color: #AAA;
+}
+input {
+    font-family: inherit;
+    font-size: inherit;
+
+    width: 190px;
+    border: 1px solid #888;
+    border-radius: 3px;
+    padding: 3px 8px;
+
+    color: #333;
+}
+button {
+    font-family: inherit;
+    font-size: inherit;
+
+    margin-bottom: 16px;
+    border: 1px solid #888;
+    border-radius: 3px;
+    padding: 3px 6px;
+
+    color: #111;
+    background: #A8A8F8;
+
+    width: 128px;
+}
+.margin-left {
+    margin-left: 16px;
+}
+.col-container {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+
+    padding: 0px;
+
+    width: 650px;
+}
+.row-container {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
+    padding: 0px;
+
+    width: 650px;
+}

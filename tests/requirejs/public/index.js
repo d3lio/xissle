@@ -6,8 +6,8 @@
 requirejs.config({
     baseUrl: '.',
     paths: {
-        src: '../../src',
-        app: 'app'
+        src: 'mods',
+        app: 'main'
     }
 });
 

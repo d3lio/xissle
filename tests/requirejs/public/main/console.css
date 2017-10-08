@@ -1,0 +1,30 @@
+.console {
+    margin-top: 16px;
+    border: 1px solid #888;
+    border-radius: 3px;
+    padding: 10px;
+
+    width: 100%;
+    height: 300px;
+
+    overflow-y: scroll;
+}
+.line {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    margin: 2px 0px;
+}
+time {
+    color: #AAA;
+    margin-right: 8px;
+}
+.line-content {
+    border-radius: 3px;
+    padding: 3px 8px;
+
+    color: #333;
+    background: #e1d0fb; /* #C8A8F8; */
+
+    width: 100%;
+}

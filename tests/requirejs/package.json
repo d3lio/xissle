@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "dependencies": {
+    "express": "^4.15.4",
     "requirejs": "^2.3.5"
   }
 }

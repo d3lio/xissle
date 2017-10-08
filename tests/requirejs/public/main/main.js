@@ -12,11 +12,18 @@ define(require => {
         constructor(name, element, events) {
             super(name, element, events);
 
+            function formatFixedDigits(n) {
+                return (n < 10 ? '0' : '') + n;
+            }
+
             this.actions = {
                 log(ctx, text) {
                     const date = new Date();
-                    const format = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-                    this.innerHTML += `${format}: ${text}<br>`;
+                    const format = `${formatFixedDigits(date.getHours())}:` +
+                                   `${formatFixedDigits(date.getMinutes())}:` +
+                                   `${formatFixedDigits(date.getSeconds())}`;
+                    this.innerHTML += `<div class="line"><time>${format}</time> ` +
+                                      `<div class="line-content">${text}</div></div>`;
                     this.scrollTop = this.scrollHeight;
                 }
             };
@@ -30,50 +37,42 @@ define(require => {
             message('box2', 'text', 'Hello world2!');
         },
 
-        keypress({ message }, event) {
-            message('con', 'log', event.key);
+        keypress({ message, from }, event) {
+            message('con', 'log', `${from}: ${event.key}`);
         },
 
-        input({ message }, event) {
-            message('con', 'log', event.target.value);
+        input({ message, from }, event) {
+            message('con', 'log', `${from}: ${event.target.value}`);
         }
     }));
 
-    const view = new View('v1', {
-        c1: {
+    xissle.view(new View('v1', 'url:main/main.html', {
+        btn: {
             type: 'ButtonComponent',
             emits: ['click'],
             channel: { name: 'btn', to: 'logic' }
         },
-        c2: {
+        tf1: {
             type: 'TextFieldComponent',
-            emits: ['input', 'keypress'],
+            emits: ['input'],
             channel: { name: 'box1', to: 'logic' }
         },
-        c3: {
+        tf2: {
             type: 'TextFieldComponent',
             emits: ['keypress'],
             channel: { name: 'box2', to: 'logic' }
         },
-        c4: {
+        tf3: {
             type: 'TextFieldComponent',
             emits: ['keypress'],
             channel: { name: '_', to: 'logic' }
         },
-        c5: {
+        console: {
             type: 'ConsoleComponent',
             emits: [],
             channel: { name: 'con', to: 'logic' }
         }
-    }, `
-        <button type="button" data-component="c1">Press me</button>
-        <input type="text" data-component="c2"/>
-        <input type="text" data-component="c3"/>
-        <input type="text" data-component="c4"/>
-        <div class="console" data-component="c5"></div>
-    `);
-
-    xissle.view(document.querySelector('body > div'), view);
+    }));
 
     xissle.run();
 });
